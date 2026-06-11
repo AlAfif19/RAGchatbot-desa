@@ -1,0 +1,27 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]
+        - button "Tutup menu" [ref=e8] [cursor=pointer]
+      - navigation [ref=e12]:
+        - link "Dashboard" [ref=e13] [cursor=pointer]:
+          - /url: /dashboard
+        - link "Nomor Chatbot" [ref=e18] [cursor=pointer]:
+          - /url: /chatbot-number
+        - link "Sumber Data" [ref=e23] [cursor=pointer]:
+          - /url: /data-source
+        - link "FAQ" [ref=e29] [cursor=pointer]:
+          - /url: /faq
+        - link "Chat Log" [ref=e34] [cursor=pointer]:
+          - /url: /chat-log
+        - link "Pengaturan AI" [ref=e38] [cursor=pointer]:
+          - /url: /settings
+    - generic [ref=e43]:
+      - banner [ref=e44]:
+        - generic [ref=e45]
+      - main [ref=e59]:
+        - generic [ref=e60]
+  - button "Open Next.js Dev Tools" [ref=e185] [cursor=pointer]:
+    - img [ref=e186]
+  - alert [ref=e189]

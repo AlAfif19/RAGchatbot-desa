@@ -1,0 +1,52 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: chatbot_warga_mysql
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: chatbot_warga
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: python:3.13-slim
+    container_name: chatbot_warga_api
+    working_dir: /app
+    env_file:
+      - .env
+    command: sh -c "pip install -r apps/api/requirements.txt && cd apps/api && python -m alembic upgrade head && cd /app && python -m uvicorn app.main:app --app-dir apps/api --host 0.0.0.0 --port 8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+
+  web:
+    image: node:22-alpine
+    container_name: chatbot_warga_web
+    working_dir: /app
+    env_file:
+      - .env
+    command: sh -c "npm --prefix apps/web run dev -- --hostname 0.0.0.0 --port 3000"
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - web_node_modules:/app/apps/web/node_modules
+      - web_next:/app/apps/web/.next
+
+volumes:
+  mysql_data:
+  web_node_modules:
+  web_next:

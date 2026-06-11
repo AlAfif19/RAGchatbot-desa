@@ -1,0 +1,11 @@
+- generic [active] [ref=e1] [box=0,0,768,1118]:
+  - generic [ref=e2] [box=0,0,768,1118]:
+    - complementary [ref=e169] [box=-288,0,288,1024]:
+      - generic [ref=e170] [box=-272,20,255,36]
+      - navigation [ref=e178] [box=-272,80,255,260]
+    - generic [ref=e38] [box=0,0,768,1118]:
+      - banner [ref=e39] [box=0,0,768,57]
+      - main [ref=e52] [box=0,57,768,1061]
+  - button "Open Next.js Dev Tools" [ref=e216] [cursor=pointer] [box=22,970,32,32]:
+    - img [ref=e217] [box=22,966,40,40]
+  - alert [ref=e220] [box=-1,1117,1,1]

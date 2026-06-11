@@ -1,0 +1,15 @@
+- generic [active] [ref=e1] [box=0,0,768,1024]:
+  - main [ref=e2] [box=0,0,768,1024]:
+    - generic [ref=e3] [box=24,24,720,976]:
+      - generic [ref=e4] [box=24,57,720,404]:
+        - generic [ref=e5] [box=49,82,670,56]
+        - paragraph [ref=e13] [box=49,154,670,48]: "Frontend mock untuk memvalidasi alur admin: pantau chat warga, kelola FAQ, sumber data RAG, nomor chatbot, dan pengaturan AI sebelum backend dibuat."
+        - generic [ref=e14] [box=49,226,670,82]
+        - generic [ref=e37] [box=65,348,638,72]
+      - generic [ref=e44] [box=24,551,720,416]:
+        - generic [ref=e45] [box=49,576,670,52]
+        - generic [ref=e48] [box=49,648,670,70]
+        - generic [ref=e51] [box=49,734,670,208]
+  - button "Open Next.js Dev Tools" [ref=e62] [cursor=pointer] [box=22,970,32,32]:
+    - img [ref=e63] [box=22,966,40,40]
+  - alert [ref=e66] [box=-1,1023,1,1]

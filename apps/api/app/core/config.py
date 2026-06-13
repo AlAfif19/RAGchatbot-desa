@@ -16,6 +16,14 @@ class Settings:
     jwt_secret: str = os.getenv("JWT_SECRET", DEFAULT_JWT_SECRET)
     internal_api_token: str = os.getenv("INTERNAL_API_TOKEN", DEFAULT_INTERNAL_API_TOKEN)
     wa_connector_url: str = os.getenv("WA_CONNECTOR_URL", "http://wa-connector:3010")
+    cors_origins: tuple[str, ...] = tuple(
+        origin.strip()
+        for origin in os.getenv(
+            "CORS_ORIGINS",
+            "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001",
+        ).split(",")
+        if origin.strip()
+    )
 
 
 def _validate_settings(value: Settings) -> Settings:

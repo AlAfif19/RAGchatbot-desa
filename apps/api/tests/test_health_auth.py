@@ -13,6 +13,19 @@ def test_health_returns_ok():
     assert response.json() == {"status": "ok", "service": "chatbot-warga-api"}
 
 
+def test_cors_allows_manual_dev_frontend_port():
+    response = client.options(
+        "/api/auth/login",
+        headers={
+            "Origin": "http://127.0.0.1:3001",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:3001"
+
+
 def test_login_accepts_bootstrap_admin():
     response = client.post(
         "/api/auth/login",

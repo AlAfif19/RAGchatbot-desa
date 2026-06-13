@@ -114,6 +114,7 @@ function Stop-ManagedProcesses {
 }
 
 Set-DefaultEnv "NEXT_PUBLIC_API_URL" ("http://127.0.0.1:{0}" -f $ApiPort)
+Set-DefaultEnv "CORS_ORIGINS" ("http://localhost:{0},http://127.0.0.1:{0}" -f $WebPort)
 Set-DefaultEnv "WA_CONNECTOR_URL" ("http://127.0.0.1:{0}" -f $WaPort)
 Set-DefaultEnv "API_BASE_URL" ("http://127.0.0.1:{0}" -f $ApiPort)
 Set-DefaultEnv "INTERNAL_API_TOKEN" "change_this_internal_token"

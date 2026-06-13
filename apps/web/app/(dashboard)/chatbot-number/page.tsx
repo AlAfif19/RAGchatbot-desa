@@ -1,14 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Plus, Save } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link2, Plus, QrCode, RefreshCw, Save, Unplug } from "lucide-react";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { ResponsiveTable } from "@/components/shared/responsive-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatDateTime, maskSecret } from "@/lib/format";
-import { useMockStore } from "@/lib/mock-store";
+import { useAppStore } from "@/lib/app-store";
 import { chatbotNumberSchema } from "@/lib/validation";
 import type { BotStatus, ChatbotNumber } from "@/lib/types";
 
@@ -21,15 +21,16 @@ const blankForm: {
 } = {
   botName: "",
   phoneNumber: "",
-  provider: "Meta Cloud API",
-  webhookSecret: "",
+  provider: "WhatsApp Web JS",
+  webhookSecret: "wa-web-js-local",
   status: "active"
 };
 
 export default function ChatbotNumberPage() {
-  const { state, actions } = useMockStore();
+  const { state, actions } = useAppStore();
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [pairingId, setPairingId] = useState<string | null>(null);
   const [form, setForm] = useState(blankForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -40,6 +41,20 @@ export default function ChatbotNumberPage() {
       ),
     [query, state.chatbotNumbers]
   );
+  const pairingTarget = useMemo(
+    () => state.chatbotNumbers.find((item) => item.id === pairingId) ?? filtered[0],
+    [filtered, pairingId, state.chatbotNumbers]
+  );
+
+  useEffect(() => {
+    if (!pairingTarget || !["pending_qr", "connecting"].includes(pairingTarget.connectionStatus)) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      void actions.refreshWhatsappConnection(pairingTarget.id);
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [actions, pairingTarget]);
 
   const edit = (item: ChatbotNumber) => {
     setEditingId(item.id);
@@ -57,6 +72,11 @@ export default function ChatbotNumberPage() {
     setEditingId(null);
     setForm(blankForm);
     setErrors({});
+  };
+
+  const startPairing = async (item: ChatbotNumber) => {
+    setPairingId(item.id);
+    await actions.connectWhatsapp(item.id);
   };
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -97,16 +117,8 @@ export default function ChatbotNumberPage() {
             <Field label="Nomor WhatsApp" error={errors.phoneNumber}>
               <input className="field" value={form.phoneNumber} onChange={(event) => setForm({ ...form, phoneNumber: event.target.value })} />
             </Field>
-            <Field label="Provider" error={errors.provider}>
-              <select className="field" value={form.provider} onChange={(event) => setForm({ ...form, provider: event.target.value })}>
-                <option>Meta Cloud API</option>
-                <option>Provider WA Lokal</option>
-                <option>Webhook API WhatsApp</option>
-              </select>
-            </Field>
-            <Field label="Webhook secret" error={errors.webhookSecret}>
-              <input className="field" value={form.webhookSecret} onChange={(event) => setForm({ ...form, webhookSecret: event.target.value })} />
-            </Field>
+            <input type="hidden" value={form.provider} name="provider" />
+            <input type="hidden" value={form.webhookSecret} name="webhookSecret" />
             <Field label="Status aktif">
               <select
                 className="field"
@@ -122,6 +134,35 @@ export default function ChatbotNumberPage() {
             <Save className="mr-2 inline h-4 w-4" />
             Simpan
           </button>
+
+          <section className="mt-5 rounded-md border bg-background p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold">Pairing WhatsApp</h3>
+                <p className="mt-1 text-xs text-muted-foreground">{pairingTarget?.botName ?? "Pilih nomor untuk scan QR."}</p>
+              </div>
+              {pairingTarget ? <StatusBadge value={pairingTarget.connectionStatus} /> : null}
+            </div>
+
+            <div className="mt-3 grid min-h-[188px] place-items-center rounded-md border bg-card p-3">
+              {pairingTarget?.connectionQr ? (
+                <img
+                  src={pairingTarget.connectionQr}
+                  alt="QR WhatsApp Web untuk menghubungkan nomor chatbot"
+                  className="aspect-square w-full max-w-[172px] rounded border bg-white p-2"
+                />
+              ) : (
+                <div className="text-center text-sm text-muted-foreground">
+                  <QrCode className="mx-auto h-10 w-10" />
+                  <p className="mt-2">{pairingTarget?.connectionMessage ?? "QR tampil setelah tombol Hubungkan ditekan."}</p>
+                </div>
+              )}
+            </div>
+
+            <p className="mt-2 min-h-8 text-xs text-muted-foreground">
+              {pairingTarget?.connectionMessage ?? "Gunakan WhatsApp di ponsel untuk scan QR yang tampil di panel ini."}
+            </p>
+          </section>
         </form>
 
         <section>
@@ -159,7 +200,25 @@ export default function ChatbotNumberPage() {
                       <td className="whitespace-nowrap px-3 py-3">{maskSecret(item.webhookSecret)}</td>
                       <td className="whitespace-nowrap px-3 py-3">{formatDateTime(item.updatedAt)}</td>
                       <td className="px-3 py-3">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
+                          <button className="focus-ring rounded-md border px-3 py-2 text-sm hover:bg-muted" onClick={() => void startPairing(item)}>
+                            <Link2 className="mr-2 inline h-4 w-4" />
+                            Hubungkan
+                          </button>
+                          <button
+                            className="focus-ring rounded-md border px-3 py-2 text-sm hover:bg-muted"
+                            onClick={() => {
+                              setPairingId(item.id);
+                              void actions.refreshWhatsappConnection(item.id);
+                            }}
+                          >
+                            <RefreshCw className="mr-2 inline h-4 w-4" />
+                            Status
+                          </button>
+                          <button className="focus-ring rounded-md border px-3 py-2 text-sm hover:bg-muted" onClick={() => void actions.disconnectWhatsapp(item.id)}>
+                            <Unplug className="mr-2 inline h-4 w-4" />
+                            Putus
+                          </button>
                           <button className="focus-ring rounded-md border px-3 py-2 text-sm hover:bg-muted" onClick={() => edit(item)}>Edit</button>
                           <button className="focus-ring rounded-md border px-3 py-2 text-sm hover:bg-muted" onClick={() => void actions.toggleChatbotNumber(item.id)}>Toggle</button>
                           <ConfirmDialog title="Hapus nomor?" description={item.botName} onConfirm={() => void actions.deleteChatbotNumber(item.id)}>

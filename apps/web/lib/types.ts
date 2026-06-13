@@ -1,5 +1,5 @@
 export type BotStatus = "active" | "inactive";
-export type ConnectionStatus = "connected" | "disconnected";
+export type ConnectionStatus = "connected" | "disconnected" | "pending_qr" | "connecting" | "error";
 export type IndexingStatus = "pending" | "processing" | "completed" | "failed";
 export type SourceType = "text" | "file" | "url";
 export type AnswerSource = "faq" | "rag" | "fallback" | "system";
@@ -14,6 +14,8 @@ export type ChatbotNumber = {
   webhookSecret: string;
   status: BotStatus;
   connectionStatus: ConnectionStatus;
+  connectionQr?: string | null;
+  connectionMessage?: string;
   updatedAt: string;
 };
 
@@ -89,8 +91,23 @@ export type DashboardSummary = {
   activeBotCount: number;
 };
 
-export type MockState = {
+export type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+};
+
+export type WhatsappConnection = {
+  chatbotNumberId: string;
+  status: ConnectionStatus;
+  qr?: string | null;
+  message: string;
+};
+
+export type AppState = {
   isAuthenticated: boolean;
+  accessToken?: string;
   adminName: string;
   apiStatus: "idle" | "loading" | "connected" | "offline" | "error";
   apiMessage?: string;

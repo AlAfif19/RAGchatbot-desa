@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import settings
+from app.core.security import hash_password, verify_password
 from app.db import models
 from app.services.document_processing import chunk_text, estimate_token_count
 
@@ -43,124 +44,21 @@ def _connection_status(status: str) -> str:
     return "connected" if status == "active" else "disconnected"
 
 
-def seed_demo_data(db: Session) -> models.Admin:
-    admin = db.scalar(select(models.Admin).where(models.Admin.email == settings.demo_admin_email))
+def bootstrap_system_data(db: Session) -> models.Admin:
+    admin = db.scalar(select(models.Admin).where(models.Admin.email == settings.admin_email))
     if admin is None:
         admin = models.Admin(
-            id=1,
-            name="Admin Desa",
-            email=settings.demo_admin_email,
-            password_hash=f"demo:{settings.demo_admin_password}",
+            id=_next_id(db, models.Admin),
+            name=settings.admin_name,
+            email=settings.admin_email,
+            password_hash=hash_password(settings.admin_password),
             role="admin",
         )
         db.add(admin)
         db.flush()
 
     if db.scalar(select(models.AiSetting).where(models.AiSetting.admin_id == admin.id)) is None:
-        db.add(models.AiSetting(id=1, admin_id=admin.id, **DEFAULT_AI_SETTINGS))
-
-    if db.scalar(select(models.ChatbotNumber).where(models.ChatbotNumber.admin_id == admin.id)) is None:
-        db.add(
-            models.ChatbotNumber(
-                id=1,
-                admin_id=admin.id,
-                bot_name="Layanan Desa Sukamaju",
-                phone_number="+62 812-3456-7001",
-                provider="Meta Cloud API",
-                webhook_secret="desa-sukamaju-secret",
-                status="active",
-                connection_status="connected",
-            )
-        )
-
-    if db.scalar(select(models.DataSource).where(models.DataSource.admin_id == admin.id)) is None:
-        db.add_all(
-            [
-                models.DataSource(
-                    id=1,
-                    admin_id=admin.id,
-                    title="SOP Surat Domisili",
-                    category="Administrasi",
-                    source_type="file",
-                    file_name="sop-surat-domisili.pdf",
-                    mime_type="application/pdf",
-                    original_size=1840000,
-                    compressed_size=1210000,
-                    indexing_status="completed",
-                ),
-                models.DataSource(
-                    id=2,
-                    admin_id=admin.id,
-                    title="Jadwal Posyandu Juni 2026",
-                    category="Kesehatan",
-                    source_type="text",
-                    content_text="Posyandu Balita dilaksanakan setiap Rabu minggu kedua pukul 08.00 WIB.",
-                    original_size=4200,
-                    compressed_size=4200,
-                    indexing_status="completed",
-                ),
-            ]
-        )
-
-    if db.scalar(select(models.Faq).where(models.Faq.admin_id == admin.id)) is None:
-        db.add(
-            models.Faq(
-                id=1,
-                admin_id=admin.id,
-                question="Apa syarat membuat surat domisili?",
-                answer="Warga membawa fotokopi KTP, KK, dan surat pengantar RT/RW ke kantor desa.",
-                keywords="domisili,surat,keterangan",
-                threshold=0.82,
-                is_active=True,
-            )
-        )
-
-    if db.scalar(select(models.ChatSession).where(models.ChatSession.citizen_phone == "+62 813-1111-2222")) is None:
-        db.add_all(
-            [
-                models.ChatSession(
-                    id=1,
-                    chatbot_number_id=1,
-                    citizen_phone="+62 813-1111-2222",
-                    status="active",
-                ),
-                models.ChatSession(
-                    id=2,
-                    chatbot_number_id=1,
-                    citizen_phone="+62 813-3333-4444",
-                    status="active",
-                ),
-                models.ChatMessage(
-                    id=1,
-                    chat_session_id=1,
-                    direction="inbound",
-                    message_text="Apa syarat membuat surat domisili?",
-                    answer_text="Warga membawa fotokopi KTP, KK, dan surat pengantar RT/RW ke kantor desa.",
-                    answer_source="faq",
-                    confidence_score=0.91,
-                    retrieved_context=[],
-                    review_status="normal",
-                ),
-                models.ChatMessage(
-                    id=2,
-                    chat_session_id=2,
-                    direction="inbound",
-                    message_text="Jadwal posyandu bulan ini kapan?",
-                    answer_text="Posyandu Balita dilaksanakan Rabu minggu kedua pukul 08.00 WIB di balai desa.",
-                    answer_source="rag",
-                    confidence_score=0.84,
-                    retrieved_context=[
-                        {
-                            "title": "Jadwal Posyandu Juni 2026",
-                            "snippet": "Posyandu Balita dilaksanakan setiap Rabu minggu kedua pukul 08.00 WIB.",
-                            "score": 0.87,
-                        }
-                    ],
-                    review_status="normal",
-                ),
-                models.FaqMatchLog(id=1, faq_id=1, chat_message_id=1, similarity_score=0.91),
-            ]
-        )
+        db.add(models.AiSetting(id=_next_id(db, models.AiSetting), admin_id=admin.id, **DEFAULT_AI_SETTINGS))
 
     db.commit()
     db.refresh(admin)
@@ -170,11 +68,12 @@ def seed_demo_data(db: Session) -> models.Admin:
 class SqlRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
-        self.admin_id = 1
+        admin = db.scalar(select(models.Admin).where(models.Admin.email == settings.admin_email))
+        self.admin_id = admin.id if admin is not None else 1
 
     def authenticate_admin(self, email: str, password: str) -> dict[str, str] | None:
         admin = self.db.scalar(select(models.Admin).where(models.Admin.email == email))
-        if admin is None or admin.password_hash != f"demo:{password}":
+        if admin is None or not verify_password(password, admin.password_hash):
             return None
         return {"id": str(admin.id), "name": admin.name, "email": admin.email, "role": admin.role}
 
@@ -212,6 +111,15 @@ class SqlRepository:
         self.db.commit()
         self.db.refresh(item)
         return self._serialize(name, item)
+
+    def update_chatbot_connection_status(self, item_id: str, connection_status: str) -> dict[str, Any] | None:
+        item = self.db.get(models.ChatbotNumber, int(item_id))
+        if item is None:
+            return None
+        item.connection_status = connection_status
+        self.db.commit()
+        self.db.refresh(item)
+        return self._serialize("chatbot_numbers", item)
 
     def delete(self, name: str, item_id: str) -> bool:
         model = MODEL_MAP[name]

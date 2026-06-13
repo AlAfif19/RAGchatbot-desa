@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ResponsiveTable } from "@/components/shared/responsive-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatDateTime } from "@/lib/format";
-import { useMockStore } from "@/lib/mock-store";
+import { useAppStore } from "@/lib/app-store";
 import { faqSchema } from "@/lib/validation";
 import type { FaqItem } from "@/lib/types";
 
@@ -21,7 +21,7 @@ const blankForm = {
 };
 
 export default function FaqPage() {
-  const { state, actions } = useMockStore();
+  const { state, actions } = useAppStore();
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(blankForm);

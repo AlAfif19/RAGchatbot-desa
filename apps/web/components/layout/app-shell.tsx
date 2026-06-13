@@ -3,19 +3,27 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { navItems } from "./nav-items";
 import { cn } from "@/lib/utils";
-import { useMockStore } from "@/lib/mock-store";
+import { useAppStore } from "@/lib/app-store";
+import { setApiAccessToken } from "@/lib/api-client";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { state, dispatch } = useMockStore();
+  const { state, dispatch } = useAppStore();
   const [open, setOpen] = useState(false);
 
+  useEffect(() => {
+    if (!state.isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [router, state.isAuthenticated]);
+
   const logout = () => {
-    dispatch({ type: "logoutMock" });
+    setApiAccessToken(undefined);
+    dispatch({ type: "logout" });
     router.push("/login");
   };
 
@@ -86,13 +94,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   ? "Terhubung ke FastAPI"
                   : state.apiStatus === "loading"
                     ? "Menghubungkan API..."
-                    : "Fallback mock data"}
+                    : state.apiMessage ?? "Menunggu koneksi API"}
               </p>
             </div>
             <div className="flex items-center gap-3">
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-medium">{state.adminName}</p>
-                <p className="text-xs text-muted-foreground">{state.isAuthenticated ? "Session mock aktif" : "Belum login"}</p>
+                <p className="text-xs text-muted-foreground">{state.isAuthenticated ? "Session aktif" : "Belum login"}</p>
               </div>
               <button className="focus-ring rounded-md border px-3 py-2 text-sm hover:bg-muted" onClick={logout}>
                 <LogOut className="mr-2 inline h-4 w-4" />

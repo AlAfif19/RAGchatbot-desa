@@ -5,6 +5,10 @@ node_modules/
 apps/web/node_modules/
 apps/web/.next/
 apps/web/dev-server.log
+apps/wa-connector/node_modules/
+apps/wa-connector/.wwebjs_auth/
+apps/wa-connector/.wwebjs_cache/
+apps/wa-connector/dev-server.log
 apps/api/__pycache__/
 apps/api/app/**/__pycache__/
 apps/api/tests/**/__pycache__/

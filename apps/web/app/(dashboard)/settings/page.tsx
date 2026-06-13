@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { Save } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
-import { useMockStore } from "@/lib/mock-store";
+import { useAppStore } from "@/lib/app-store";
 import { aiSettingsSchema } from "@/lib/validation";
 
 export default function SettingsPage() {
-  const { state, actions } = useMockStore();
+  const { state, actions } = useAppStore();
   const [form, setForm] = useState(state.aiSettings);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
@@ -29,7 +29,7 @@ export default function SettingsPage() {
     <div>
       <PageHeader
         title="Pengaturan AI"
-        description="Atur provider LLM, prompt dasar, retrieval, threshold FAQ, dan jawaban fallback untuk simulasi frontend."
+        description="Atur provider LLM, prompt dasar, retrieval, threshold FAQ, dan jawaban fallback."
       />
 
       <form className="max-w-3xl rounded-md border bg-card p-4" onSubmit={submit}>
@@ -82,7 +82,7 @@ export default function SettingsPage() {
             <Save className="mr-2 inline h-4 w-4" />
             Simpan pengaturan
           </button>
-          {saved ? <span className="text-sm text-emerald-700">Pengaturan mock tersimpan.</span> : null}
+          {saved ? <span className="text-sm text-emerald-700">Pengaturan tersimpan.</span> : null}
         </div>
       </form>
     </div>

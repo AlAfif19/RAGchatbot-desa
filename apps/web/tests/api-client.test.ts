@@ -1,12 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  apiClient,
   mapAiSettingsFromApi,
   mapChatLogFromApi,
   mapChatbotNumberFromApi,
   mapDashboardSummaryFromApi,
   mapDataSourceFromApi,
-  mapFaqFromApi
+  mapFaqFromApi,
+  mapWhatsappConnectionFromApi
 } from "../lib/api-client";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("api client mappers", () => {
   it("maps chatbot number fields to frontend shape", () => {
@@ -104,5 +110,44 @@ describe("api client mappers", () => {
         created_at: "2026-06-11"
       })
     ).toMatchObject({ sessionId: "session-1", citizenPhone: "+62", messageText: "Q", answerSource: "faq" });
+  });
+
+  it("maps WhatsApp connection fields to frontend shape", () => {
+    expect(
+      mapWhatsappConnectionFromApi({
+        chatbot_number_id: "bot-1",
+        status: "pending_qr",
+        qr: "data:image/png;base64,qr-test",
+        message: "Scan QR WhatsApp untuk menghubungkan nomor."
+      })
+    ).toEqual({
+      chatbotNumberId: "bot-1",
+      status: "pending_qr",
+      qr: "data:image/png;base64,qr-test",
+      message: "Scan QR WhatsApp untuk menghubungkan nomor."
+    });
+  });
+
+  it("starts WhatsApp QR pairing through the backend API", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        chatbot_number_id: "bot-1",
+        status: "pending_qr",
+        qr: "data:image/png;base64,qr-test",
+        message: "Scan QR WhatsApp untuk menghubungkan nomor."
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await apiClient.connectWhatsapp("bot-1");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8002/api/chatbot-numbers/bot-1/connect",
+      expect.objectContaining({ method: "POST" })
+    );
+    expect(result.status).toBe("pending_qr");
+    expect(result.qr).toBe("data:image/png;base64,qr-test");
   });
 });

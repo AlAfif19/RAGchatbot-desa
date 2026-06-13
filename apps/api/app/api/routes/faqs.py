@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
-from app.api.deps import get_repo
+from app.api.deps import get_repo, require_bearer_admin
 from app.db.repository import SqlRepository
 from app.schemas.faq import FaqCreate, FaqPublic, FaqUpdate
 
-router = APIRouter(prefix="/faqs", tags=["faqs"])
+router = APIRouter(prefix="/faqs", tags=["faqs"], dependencies=[Depends(require_bearer_admin)])
 
 
 @router.get("", response_model=list[FaqPublic])

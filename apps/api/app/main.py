@@ -4,8 +4,8 @@ from collections.abc import AsyncIterator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, chat_logs, chatbot_numbers, dashboard, data_sources, faqs, settings
-from app.db.repository import seed_demo_data
+from app.api.routes import auth, chat_logs, chatbot_numbers, dashboard, data_sources, faqs, settings, whatsapp_internal
+from app.db.repository import bootstrap_system_data
 from app.db.session import SessionLocal
 
 
@@ -13,7 +13,7 @@ from app.db.session import SessionLocal
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     db = SessionLocal()
     try:
-        seed_demo_data(db)
+        bootstrap_system_data(db)
     finally:
         db.close()
     yield
@@ -40,6 +40,7 @@ def create_app() -> FastAPI:
     app.include_router(faqs.router, prefix="/api")
     app.include_router(chat_logs.router, prefix="/api")
     app.include_router(settings.router, prefix="/api")
+    app.include_router(whatsapp_internal.router, prefix="/api")
     return app
 
 

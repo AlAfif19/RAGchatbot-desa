@@ -6,10 +6,10 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ResponsiveTable } from "@/components/shared/responsive-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatDateTime, formatPercent, formatShortDate } from "@/lib/format";
-import { useMockStore } from "@/lib/mock-store";
+import { useAppStore } from "@/lib/app-store";
 
 export default function DashboardPage() {
-  const { state } = useMockStore();
+  const { state } = useAppStore();
   const incomingMessages = state.chatMessages.filter((message) => message.direction === "incoming");
   const today = "2026-06-11";
   const totalChatsToday =
@@ -39,7 +39,7 @@ export default function DashboardPage() {
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <MetricCard label="Chat hari ini" value={totalChatsToday} helper="Dari mock chat log" icon={MessageSquareText} />
+        <MetricCard label="Chat hari ini" value={totalChatsToday} helper="Dari log chat tersimpan" icon={MessageSquareText} />
         <MetricCard label="Dijawab FAQ" value={answeredByFaq} helper="FAQ prioritas" icon={HelpCircle} />
         <MetricCard label="Dijawab RAG" value={answeredByRag} helper="Berdasarkan dokumen" icon={Sparkles} />
         <MetricCard label="Sumber aktif" value={activeDataSources} helper="Index completed" icon={Database} />

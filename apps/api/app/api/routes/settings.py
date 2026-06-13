@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_repo
+from app.api.deps import get_repo, require_bearer_admin
 from app.db.repository import SqlRepository
 from app.schemas.settings import AiSettings
 
-router = APIRouter(prefix="/settings", tags=["settings"])
+router = APIRouter(prefix="/settings", tags=["settings"], dependencies=[Depends(require_bearer_admin)])
 
 
 @router.get("/ai", response_model=AiSettings)

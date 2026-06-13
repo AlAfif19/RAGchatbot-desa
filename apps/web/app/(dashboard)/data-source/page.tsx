@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ResponsiveTable } from "@/components/shared/responsive-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatDateTime, formatFileSize } from "@/lib/format";
-import { useMockStore } from "@/lib/mock-store";
+import { useAppStore } from "@/lib/app-store";
 import { dataSourceSchema } from "@/lib/validation";
 import type { DataSource, SourceType } from "@/lib/types";
 
@@ -36,7 +36,7 @@ const fileTypes: Record<string, string> = {
 };
 
 export default function DataSourcePage() {
-  const { state, actions } = useMockStore();
+  const { state, actions } = useAppStore();
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(blankForm);

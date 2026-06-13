@@ -1,5 +1,6 @@
 import type {
   AiSettings,
+  AdminUser,
   AnswerSource,
   BotStatus,
   ChatMessage,
@@ -14,10 +15,16 @@ import type {
   FaqItem,
   IndexingStatus,
   ReviewStatus,
-  SourceType
+  SourceType,
+  WhatsappConnection
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8002";
+let accessToken: string | undefined;
+
+export function setApiAccessToken(token: string | undefined) {
+  accessToken = token;
+}
 
 type ApiChatbotNumber = {
   id: string;
@@ -86,6 +93,19 @@ type ApiDashboardSummary = {
   active_bot_count: number;
 };
 
+type ApiLoginResponse = {
+  access_token: string;
+  token_type: string;
+  admin: AdminUser;
+};
+
+type ApiWhatsappConnection = {
+  chatbot_number_id: string;
+  status: string;
+  qr?: string | null;
+  message: string;
+};
+
 export type ApiSnapshot = {
   dashboardSummary: DashboardSummary;
   chatbotNumbers: ChatbotNumber[];
@@ -100,9 +120,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: isFormData
-      ? init?.headers
+      ? {
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          ...(init?.headers ?? {})
+        }
       : {
           "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
           ...(init?.headers ?? {})
         }
   });
@@ -195,6 +219,15 @@ export function mapDashboardSummaryFromApi(item: ApiDashboardSummary): Dashboard
   };
 }
 
+export function mapWhatsappConnectionFromApi(item: ApiWhatsappConnection): WhatsappConnection {
+  return {
+    chatbotNumberId: item.chatbot_number_id,
+    status: item.status as WhatsappConnection["status"],
+    qr: item.qr ?? null,
+    message: item.message
+  };
+}
+
 function chatbotNumberToApi(input: ChatbotNumberInput) {
   return {
     bot_name: input.botName,
@@ -241,7 +274,7 @@ function aiSettingsToApi(input: AiSettings): ApiAiSettings {
 
 export const apiClient = {
   login(email: string, password: string) {
-    return request("/api/auth/login", {
+    return request<ApiLoginResponse>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password })
     });
@@ -271,6 +304,19 @@ export const apiClient = {
   },
   deleteChatbotNumber(id: string) {
     return request<void>(`/api/chatbot-numbers/${id}`, { method: "DELETE" });
+  },
+  connectWhatsapp(id: string) {
+    return request<ApiWhatsappConnection>(`/api/chatbot-numbers/${id}/connect`, { method: "POST" }).then(
+      mapWhatsappConnectionFromApi
+    );
+  },
+  getWhatsappConnection(id: string) {
+    return request<ApiWhatsappConnection>(`/api/chatbot-numbers/${id}/connection`).then(mapWhatsappConnectionFromApi);
+  },
+  disconnectWhatsapp(id: string) {
+    return request<ApiWhatsappConnection>(`/api/chatbot-numbers/${id}/disconnect`, { method: "POST" }).then(
+      mapWhatsappConnectionFromApi
+    );
   },
   createDataSource(input: DataSourceInput) {
     return request<ApiDataSource>("/api/data-sources", {

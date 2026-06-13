@@ -3,14 +3,14 @@ services:
     image: mysql:8.4
     container_name: chatbot_warga_mysql
     environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
       MYSQL_DATABASE: chatbot_warga
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -25,10 +25,29 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      wa-connector:
+        condition: service_started
     ports:
       - "8000:8000"
     volumes:
       - .:/app
+
+  wa-connector:
+    build:
+      context: .
+      dockerfile: apps/wa-connector/Dockerfile
+    container_name: chatbot_warga_wa_connector
+    environment:
+      PORT: "3010"
+      API_BASE_URL: http://api:8000
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is required}
+      WA_SESSION_PATH: /app/apps/wa-connector/.wwebjs_auth
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+    ports:
+      - "3010:3010"
+    volumes:
+      - wa_sessions:/app/apps/wa-connector/.wwebjs_auth
 
   web:
     image: node:22-alpine
@@ -48,5 +67,6 @@ services:
 
 volumes:
   mysql_data:
+  wa_sessions:
   web_node_modules:
   web_next:

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.deps import get_repo
+from app.api.deps import get_repo, require_bearer_admin
 from app.db.repository import SqlRepository
 from app.schemas.chat_log import ChatLogPublic
 
-router = APIRouter(prefix="/chat-logs", tags=["chat-logs"])
+router = APIRouter(prefix="/chat-logs", tags=["chat-logs"], dependencies=[Depends(require_bearer_admin)])
 
 
 @router.get("", response_model=list[ChatLogPublic])

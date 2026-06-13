@@ -6,11 +6,11 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ResponsiveTable } from "@/components/shared/responsive-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatDateTime, formatPercent } from "@/lib/format";
-import { useMockStore } from "@/lib/mock-store";
+import { useAppStore } from "@/lib/app-store";
 import type { AnswerSource, ChatMessage } from "@/lib/types";
 
 export default function ChatLogPage() {
-  const { state, actions } = useMockStore();
+  const { state, actions } = useAppStore();
   const [keyword, setKeyword] = useState("");
   const [phone, setPhone] = useState("");
   const [date, setDate] = useState("");

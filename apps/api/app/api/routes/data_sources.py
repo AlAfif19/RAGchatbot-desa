@@ -2,13 +2,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 
-from app.api.deps import get_repo
+from app.api.deps import get_repo, require_bearer_admin
 from app.db.repository import SqlRepository
 from app.schemas.data_source import DataSourceCreate, DataSourcePublic, DataSourceUpdate
 from app.schemas.document_chunk import DocumentChunkPublic
 from app.services.document_processing import decode_text_file, is_supported_text_file
 
-router = APIRouter(prefix="/data-sources", tags=["data-sources"])
+router = APIRouter(prefix="/data-sources", tags=["data-sources"], dependencies=[Depends(require_bearer_admin)])
 
 
 @router.get("", response_model=list[DataSourcePublic])

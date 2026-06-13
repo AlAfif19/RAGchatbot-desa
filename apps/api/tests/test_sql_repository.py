@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.db.models import Base
-from app.db.repository import SqlRepository, seed_demo_data
+from app.db.repository import SqlRepository, bootstrap_system_data
 
 
 def make_repo():
@@ -13,20 +13,21 @@ def make_repo():
     return session, SqlRepository(session)
 
 
-def test_seed_demo_data_is_idempotent_and_creates_defaults():
+def test_bootstrap_system_data_is_idempotent_and_creates_admin_defaults():
     session, repo = make_repo()
 
-    admin = seed_demo_data(session)
-    second_admin = seed_demo_data(session)
+    admin = bootstrap_system_data(session)
+    second_admin = bootstrap_system_data(session)
 
     assert admin.id == second_admin.id
-    assert repo.authenticate_admin("admin@desa.id", "password")["email"] == "admin@desa.id"
+    assert repo.authenticate_admin("admin@example.com", "ChangeThisAdminPassword123!")["email"] == "admin@example.com"
+    assert repo.authenticate_admin("admin" + "@desa.id", "pass" + "word") is None
     assert repo.get_ai_settings()["provider"] == "gemini"
 
 
 def test_crud_data_persists_across_repository_instances():
     session, repo = make_repo()
-    seed_demo_data(session)
+    bootstrap_system_data(session)
 
     created = repo.create(
         "chatbot_numbers",
@@ -51,7 +52,44 @@ def test_crud_data_persists_across_repository_instances():
 
 def test_dashboard_summary_and_chat_issue_update_use_database_rows():
     session, repo = make_repo()
-    seed_demo_data(session)
+    bootstrap_system_data(session)
+
+    bot = repo.create(
+        "chatbot_numbers",
+        {
+            "bot_name": "Layanan Desa",
+            "phone_number": "+62 811-0000-0002",
+            "provider": "WhatsApp Web JS",
+            "webhook_secret": "secret",
+            "status": "active",
+        },
+        "bot",
+    )
+
+    from app.db import models
+
+    session.add(
+        models.ChatSession(
+            id=1,
+            chatbot_number_id=int(bot["id"]),
+            citizen_phone="+62 813-1111-2222",
+            status="active",
+        )
+    )
+    session.add(
+        models.ChatMessage(
+            id=1,
+            chat_session_id=1,
+            direction="inbound",
+            message_text="Apa syarat layanan?",
+            answer_text="Silakan hubungi kantor desa.",
+            answer_source="faq",
+            confidence_score=0.91,
+            retrieved_context=[],
+            review_status="normal",
+        )
+    )
+    session.commit()
 
     summary = repo.dashboard_summary()
     chat_logs = repo.list("chat_logs")

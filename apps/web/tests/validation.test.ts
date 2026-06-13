@@ -9,8 +9,8 @@ import {
 
 describe("validation schemas", () => {
   it("accepts valid login input", () => {
-    expect(loginSchema.parse({ email: "admin@desa.id", password: "secret" })).toEqual({
-      email: "admin@desa.id",
+    expect(loginSchema.parse({ email: "admin@example.com", password: "secret" })).toEqual({
+      email: "admin@example.com",
       password: "secret"
     });
   });

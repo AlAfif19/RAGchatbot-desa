@@ -150,4 +150,19 @@ describe("api client mappers", () => {
     expect(result.status).toBe("pending_qr");
     expect(result.qr).toBe("data:image/png;base64,qr-test");
   });
+
+  it("includes backend detail in failed API errors", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 400,
+        json: async () => ({ detail: "Saat ini upload hanya mendukung TXT, MD, dan CSV" })
+      }))
+    );
+
+    await expect(apiClient.uploadDataSource({ title: "SOP", category: "Administrasi", file: new File(["x"], "sop.pdf") })).rejects.toThrow(
+      "API 400: Saat ini upload hanya mendukung TXT, MD, dan CSV"
+    );
+  });
 });

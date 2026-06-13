@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.api.deps import get_wa_connector_client
 from app.main import app
+from app.services.wa_connector import WaConnectorError
 
 
 class FakeWaConnectorClient:
@@ -40,6 +41,12 @@ class FakeWaConnectorClient:
     def send_message(self, chatbot_number_id: str, to: str, message: str) -> dict:
         self.calls.append(("send", chatbot_number_id, to, message))
         return {"ok": True}
+
+
+class FailingLogoutWaConnectorClient(FakeWaConnectorClient):
+    def logout_session(self, chatbot_number_id: str) -> dict:
+        self.calls.append(("logout", chatbot_number_id))
+        raise WaConnectorError("WA connector tidak dapat dihubungi")
 
 
 client = TestClient(app)
@@ -127,6 +134,25 @@ def test_chatbot_number_can_disconnect_whatsapp_session():
 
     assert response.status_code == 200
     assert response.json()["status"] == "disconnected"
+    assert fake.calls == [("logout", item["id"])]
+
+
+def test_chatbot_number_disconnect_is_idempotent_when_connector_fails():
+    fake = FailingLogoutWaConnectorClient()
+    item = create_chatbot_number()
+    app.dependency_overrides[get_wa_connector_client] = lambda: fake
+    try:
+        response = client.post(f"/api/chatbot-numbers/{item['id']}/disconnect", headers=auth_headers())
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "chatbot_number_id": item["id"],
+        "status": "disconnected",
+        "qr": None,
+        "message": "WhatsApp diputuskan dari dashboard. Connector sedang tidak dapat dihubungi.",
+    }
     assert fake.calls == [("logout", item["id"])]
 
 

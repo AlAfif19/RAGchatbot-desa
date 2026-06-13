@@ -33,6 +33,7 @@ export default function ChatbotNumberPage() {
   const [pairingId, setPairingId] = useState<string | null>(null);
   const [form, setForm] = useState(blankForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   const filtered = useMemo(
     () =>
@@ -72,11 +73,27 @@ export default function ChatbotNumberPage() {
     setEditingId(null);
     setForm(blankForm);
     setErrors({});
+    setActionMessage(null);
   };
 
   const startPairing = async (item: ChatbotNumber) => {
     setPairingId(item.id);
-    await actions.connectWhatsapp(item.id);
+    setActionMessage(null);
+    try {
+      await actions.connectWhatsapp(item.id);
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : "Gagal menghubungkan WhatsApp");
+    }
+  };
+
+  const disconnect = async (item: ChatbotNumber) => {
+    setPairingId(item.id);
+    setActionMessage(null);
+    try {
+      await actions.disconnectWhatsapp(item.id);
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : "Gagal memutus WhatsApp");
+    }
   };
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -162,6 +179,7 @@ export default function ChatbotNumberPage() {
             <p className="mt-2 min-h-8 text-xs text-muted-foreground">
               {pairingTarget?.connectionMessage ?? "Gunakan WhatsApp di ponsel untuk scan QR yang tampil di panel ini."}
             </p>
+            {actionMessage ? <p className="mt-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{actionMessage}</p> : null}
           </section>
         </form>
 
@@ -215,7 +233,7 @@ export default function ChatbotNumberPage() {
                             <RefreshCw className="mr-2 inline h-4 w-4" />
                             Status
                           </button>
-                          <button className="focus-ring rounded-md border px-3 py-2 text-sm hover:bg-muted" onClick={() => void actions.disconnectWhatsapp(item.id)}>
+                          <button className="focus-ring rounded-md border px-3 py-2 text-sm hover:bg-muted" onClick={() => void disconnect(item)}>
                             <Unplug className="mr-2 inline h-4 w-4" />
                             Putus
                           </button>

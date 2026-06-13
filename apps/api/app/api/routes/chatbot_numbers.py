@@ -73,7 +73,13 @@ def disconnect_chatbot_number(
         repo.update_chatbot_connection_status(item_id, connection["status"])
         return connection
     except WaConnectorError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        repo.update_chatbot_connection_status(item_id, "disconnected")
+        return {
+            "chatbot_number_id": item_id,
+            "status": "disconnected",
+            "qr": None,
+            "message": "WhatsApp diputuskan dari dashboard. Connector sedang tidak dapat dihubungi.",
+        }
 
 
 @router.post("/{item_id}/send")

@@ -42,6 +42,7 @@ export default function DataSourcePage() {
   const [form, setForm] = useState(blankForm);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formMessage, setFormMessage] = useState<string | null>(null);
 
   const filtered = useMemo(
     () =>
@@ -56,6 +57,7 @@ export default function DataSourcePage() {
     setForm(blankForm);
     setSelectedFile(null);
     setErrors({});
+    setFormMessage(null);
   };
 
   const edit = (item: DataSource) => {
@@ -71,10 +73,12 @@ export default function DataSourcePage() {
     });
     setSelectedFile(null);
     setErrors({});
+    setFormMessage(null);
   };
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setFormMessage(null);
     if (selectedFile && !editingId) {
       const uploadForm = {
         ...form,
@@ -88,8 +92,12 @@ export default function DataSourcePage() {
         setErrors(Object.fromEntries(result.error.issues.map((issue) => [String(issue.path[0]), issue.message])));
         return;
       }
-      await actions.uploadDataSource({ title: result.data.title, category: result.data.category, file: selectedFile });
-      reset();
+      try {
+        await actions.uploadDataSource({ title: result.data.title, category: result.data.category, file: selectedFile });
+        reset();
+      } catch (error) {
+        setFormMessage(error instanceof Error ? error.message : "Upload sumber data gagal");
+      }
       return;
     }
     const result = dataSourceSchema.safeParse(form);
@@ -97,12 +105,16 @@ export default function DataSourcePage() {
       setErrors(Object.fromEntries(result.error.issues.map((issue) => [String(issue.path[0]), issue.message])));
       return;
     }
-    if (editingId) {
-      await actions.updateDataSource({ ...result.data, id: editingId });
-    } else {
-      await actions.addDataSource(result.data);
+    try {
+      if (editingId) {
+        await actions.updateDataSource({ ...result.data, id: editingId });
+      } else {
+        await actions.addDataSource(result.data);
+      }
+      reset();
+    } catch (error) {
+      setFormMessage(error instanceof Error ? error.message : "Simpan sumber data gagal");
     }
-    reset();
   };
 
   const updateFile = (fileName: string) => {
@@ -189,6 +201,7 @@ export default function DataSourcePage() {
             {selectedFile && !editingId ? <Upload className="mr-2 inline h-4 w-4" /> : <Save className="mr-2 inline h-4 w-4" />}
             {selectedFile && !editingId ? "Upload & index" : "Simpan"}
           </button>
+          {formMessage ? <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{formMessage}</p> : null}
         </form>
 
         <section>

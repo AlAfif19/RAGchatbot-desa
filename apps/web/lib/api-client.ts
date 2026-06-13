@@ -131,7 +131,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         }
   });
   if (!response.ok) {
-    throw new Error(`API ${response.status}: ${path}`);
+    let detail = path;
+    try {
+      const errorBody = (await response.json()) as { detail?: unknown };
+      if (typeof errorBody.detail === "string") {
+        detail = errorBody.detail;
+      }
+    } catch {
+      detail = path;
+    }
+    throw new Error(`API ${response.status}: ${detail}`);
   }
   if (response.status === 204) {
     return undefined as T;

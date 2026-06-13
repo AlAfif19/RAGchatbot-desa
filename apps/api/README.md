@@ -24,6 +24,18 @@ WA_CONNECTOR_URL=http://127.0.0.1:3010
 
 Ganti nilai rahasia sebelum deployment produksi.
 
+## Auto Reply WhatsApp
+
+Pesan inbound dari WA connector masuk melalui `POST /api/internal/whatsapp/inbound`. Backend akan:
+
+1. memvalidasi `X-Internal-Token`;
+2. memastikan `chatbot_number_id` terdaftar;
+3. membuat atau melanjutkan sesi chat warga;
+4. memilih jawaban dari FAQ aktif, potongan sumber data, atau `fallback_answer`;
+5. menyimpan chat log dan mengirim jawaban balik lewat WA connector.
+
+Tahap ini memakai pencocokan teks lokal agar sistem bisa berjalan tanpa API LLM eksternal. Integrasi LLM penuh dapat ditambahkan di atas alur yang sama.
+
 ## Endpoint
 
 1. `GET /health`
@@ -44,5 +56,6 @@ Ganti nilai rahasia sebelum deployment produksi.
 16. `GET /api/chat-logs`
 17. `POST /api/chat-logs/{id}/mark-issue`
 18. `GET|PUT /api/settings/ai`
+19. `POST /api/internal/whatsapp/inbound`
 
 Endpoint dashboard dan CRUD membutuhkan `Authorization: Bearer <token>`. Endpoint internal dari WA connector membutuhkan `X-Internal-Token`.

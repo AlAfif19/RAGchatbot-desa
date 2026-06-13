@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.security import hash_password, verify_password
 from app.db import models
 from app.services.document_processing import chunk_text, estimate_token_count
+from app.services.reply_engine import ReplyCandidate, choose_reply
 
 
 DEFAULT_AI_SETTINGS = {
@@ -120,6 +121,94 @@ class SqlRepository:
         self.db.commit()
         self.db.refresh(item)
         return self._serialize("chatbot_numbers", item)
+
+    def handle_whatsapp_inbound(self, chatbot_number_id: str, sender: str, message_text: str) -> ReplyCandidate | None:
+        try:
+            chatbot_number_pk = int(chatbot_number_id)
+        except ValueError:
+            return None
+
+        chatbot_number = self.db.get(models.ChatbotNumber, chatbot_number_pk)
+        if chatbot_number is None:
+            return None
+
+        faqs = list(
+            self.db.scalars(
+                select(models.Faq)
+                .where(models.Faq.admin_id == chatbot_number.admin_id, models.Faq.is_active.is_(True))
+                .order_by(models.Faq.updated_at.desc(), models.Faq.id.desc())
+            ).all()
+        )
+        chunks = list(
+            self.db.scalars(
+                select(models.DocumentChunk)
+                .join(models.DocumentChunk.data_source)
+                .options(joinedload(models.DocumentChunk.data_source))
+                .where(
+                    models.DataSource.admin_id == chatbot_number.admin_id,
+                    models.DataSource.indexing_status == "completed",
+                )
+                .order_by(models.DocumentChunk.created_at.desc(), models.DocumentChunk.id.desc())
+            ).all()
+        )
+        ai_settings = self.get_ai_settings()
+        reply = choose_reply(message_text, faqs, chunks, ai_settings)
+        self.record_whatsapp_exchange(
+            chatbot_number_id=chatbot_number.id,
+            sender=sender,
+            message_text=message_text,
+            reply=reply,
+        )
+        return reply
+
+    def record_whatsapp_exchange(
+        self,
+        *,
+        chatbot_number_id: int,
+        sender: str,
+        message_text: str,
+        reply: ReplyCandidate,
+    ) -> None:
+        session = self.db.scalar(
+            select(models.ChatSession).where(
+                models.ChatSession.chatbot_number_id == chatbot_number_id,
+                models.ChatSession.citizen_phone == sender,
+            )
+        )
+        if session is None:
+            session = models.ChatSession(
+                id=_next_id(self.db, models.ChatSession),
+                chatbot_number_id=chatbot_number_id,
+                citizen_phone=sender,
+                status="active",
+            )
+            self.db.add(session)
+            self.db.flush()
+
+        session.last_message_at = datetime.now(timezone.utc)
+        chat_message = models.ChatMessage(
+            id=_next_id(self.db, models.ChatMessage),
+            chat_session_id=session.id,
+            direction="inbound",
+            message_text=message_text,
+            answer_text=reply.answer,
+            answer_source=reply.source,
+            confidence_score=reply.confidence,
+            retrieved_context=reply.retrieved_context or [],
+            review_status="normal",
+        )
+        self.db.add(chat_message)
+        self.db.flush()
+        if reply.faq_id is not None and reply.confidence is not None:
+            self.db.add(
+                models.FaqMatchLog(
+                    id=_next_id(self.db, models.FaqMatchLog),
+                    faq_id=reply.faq_id,
+                    chat_message_id=chat_message.id,
+                    similarity_score=reply.confidence,
+                )
+            )
+        self.db.commit()
 
     def delete(self, name: str, item_id: str) -> bool:
         model = MODEL_MAP[name]

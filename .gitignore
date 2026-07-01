@@ -20,4 +20,6 @@ apps/api/*.db
 .pytest_cache/
 apps/api/.pytest_cache/
 *.png
+!docs/screenshots/
+!docs/screenshots/*.png
 *.log
